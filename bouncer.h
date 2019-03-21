@@ -4,10 +4,10 @@
  */
 
 #ifndef BOUNCER_H
-#def BOUNCER_H
- extern "c"
+#define BOUNCER_H
+ extern "C"
  {
-   #include "../ffmpeg/include/libavcodec"
+   #include "../ffmpeg/include/libavcodec/avcodec.h"
 
  }
 
