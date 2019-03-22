@@ -121,8 +121,8 @@ int main (int argc, char **argv)
   }
 
   AVFrame* destFrame = av_frame_alloc();
-  //we will convert to RGB32
-  AVPixelFormat destFormat = AV_PIX_FMT_RGB24;
+  // we want to modify this in the future to get only the supported pixel formats from the cool codec
+  AVPixelFormat destFormat = AV_PIX_FMT_RGB8;
   av_image_alloc(destFrame->data, destFrame->linesize, destFrame->width, destFrame->height, destFormat, 32);
   //  avpicture_alloc(&destPic,destFormat, decodedFrame->width,decodedFrame->height);
   SwsContext *ctxt = sws_getContext(decodedFrame->width, decodedFrame->height,
@@ -136,126 +136,86 @@ int main (int argc, char **argv)
   sws_scale(ctxt, decodedFrame->data, decodedFrame->linesize, 0, decodedFrame->height, destFrame->data, destFrame->linesize);
   sws_freeContext(ctxt);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  // Finding jpeg codec and exiting if error 
-  const AVCodec *codec;
-  codec = avcodec_find_decoder(AV_CODEC_ID_JPEG2000);
-  if (!codec)
-  {
-    std:: cout << "Couldn't read codec" << std::endl;
-    exit (-1);
-  }
-
-  // allocating an AvPacket to put data in and exiting if error 
-  AVPacket *av_pkt;
-  av_pkt = av_packet_alloc();
-  if (!av_pkt) 
-  {
-    std::cout << "Couldn't allocate packet" << std::endl;
-    exit(-1);
-  }
-
-  // getting a parser and exiting if error 
-  AVCodecParserContext *parser;
-  parser = av_parser_init(codec->id);
-  if (!parser) 
-  {
-    fprintf(stderr, "parser not found\n");
-    exit(1);
-  }
-
-  // getting the codec context based off of current coded, exiting if error 
-  AVCodecContext *codec_context = NULL;
-  codec_context = avcodec_alloc_context3(codec);
-  if (!codec_context) 
-  {
-     std::cout << "Could not allocate video codec context" << std::endl;
-     exit(1);
-  }
-
-
-  //  opening the codec 
-  if (avcodec_open2(codec_context, codec, NULL) < 0) 
-  {
-     fprintf(stderr, "Could not open codec\n");
-     exit(1);
-  }
-   
-  // allocating a frame, and exiting if error
-  AVFrame* frame;
-  frame = av_frame_alloc();
-  if (!frame) 
-  {
-     fprintf(stderr, "Could not allocate video frame\n");
-     exit(1);
-  }
-
-
-  // opening an input file stream and writing the contents
-  // of the jpeg into a buffer
-  // std::ifstream ifs(filename, std::ifstream::binary);
-  // std::filebuf* pointer_to_file_buffer = ifs.rdbuf();
-
-  // std::size_t size = pointer_to_file_buffer->pubseekoff (0,ifs.end,ifs.in);
-  // pointer_to_file_buffer->pubseekpos (0,ifs.in);
-   
-
-  // uint8_t buffer[size]; 
-  // pointer_to_file_buffer->sgetn (buffer,size);
-  
-  // ifs.close();
-
-
-  // file = fopen(filename, "rb");
-  // if (!file) 
-  // {
-  //    fprintf(stderr, "Could not open %s\n", filename);
-  //    exit(1);
-  // }
-
-
-  
-
-  // while (!feof(f)) 
-  // {
-  //    /* read raw data from the input file */
-  //    data_size = fread(read_buf, 1, INBUF_SIZE, file);
-  //    if (!data_size)
-  //        break;
-
-  //    /* use the parser to split the data into frames */
-  //    data = read_buf;
-  //    while (data_size > 0) 
-  //    {
-  //      ret = av_parser_parse2(parser, c, &pkt->data, &pkt->size,
-  //                                data, data_size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
-  //      if (ret < 0) 
-  //      {
-  // 	 fprintf(stderr, "Error while parsing\n");
-  //        exit(1);
-  //       }
-  //       data      += ret;
-  //       data_size -= ret;
-
-  //       if (pkt->size)
-  //           decode(c, frame, pkt, outfilename);
-  //    }
-  // }
-
-
   
   
 }
+
+
+int encode_cool(AVFrame* frame, int frameNumber) 
+{
+
+  // get the cool codec
+  const AVCodec* cool_codec = avcodec_find_encoder_by_name("cool");
+  if (!cool_codec)
+  {
+    std::cout << "Couldn't find cool codec" << std::endl;
+    return ERROR_CODE;
+  }
+
+
+  // get the cool codec context
+  AVCodecContext* codec_context = avcodec_alloc_context3(cool_codec);
+  if (!codec_context)
+  {
+    std::cout << "Couldn't find cool codec context" << std::endl;
+    return ERROR_CODE;
+  }
+
+  // allocate packet for cool file
+  AVPacket* cool_pkt = av_packet_alloc();
+  if (!cool_pkt)
+  {
+    std::cout << "Couldn't allocate packet" << std::endl;
+    return ERROR_CODE;
+  }
+
+  // open the codec
+  int codecOpenRet = avcodec_open2(codec_context, cool_codec, NULL);
+  if (codecOpenRet < 0)
+  {
+    std::cout << "Couldn't open codec" << std::endl;
+    return ERROR_CODE;
+  }
+
+
+  // encode the frame using cool codec
+  int sendFrameRet = avcodec_send_frame(codec_context, frame);
+  if (sendFrameRet < 0)
+  {
+    std::cout << "Couldn't open codec" << std::endl;
+    return ERROR_CODE;
+  }
+
+  int receivePktRet = avcodec_receive_packet(codec_context, cool_pkt);
+  if (receivePktRet == AVERROR(EAGAIN) || receivePktRet == AVERROR_EOF)
+    return ERROR_CODE;
+  else if (receivePktRet < 0) 
+  {
+    std::cout << "Error during encoding" << std::endl;
+    return ERROR_CODE;
+  }
+
+  FILE*f = fopen("test.cool", "wb");
+
+  fwrite(cool_pkt->data, 1, cool_pkt->size, f);
+  
+  // AVFormatContext* fmt_context = avformat_alloc_context();
+  // if (!fmt_context)
+  // {
+  //   std::cout << "Couldn't allocate format contextc" << endl;
+  //   return ERROR_CODE;
+  // }
+
+  // AVOutputFormat* fmt_output = av_guess_format(NULL, "test.cool", NULL);
+  // fmt_context->oformat = ftm_output;
+
+  
+
+  
+
+  
+
+  
+
+}
+

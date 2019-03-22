@@ -13,6 +13,7 @@
    #include <libavutil/imgutils.h>
  }
 
+   int encode_cool(AVFrame* frame, int frameNumber);
 
 
 #endif
