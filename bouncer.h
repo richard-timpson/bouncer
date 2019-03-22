@@ -7,8 +7,10 @@
 #define BOUNCER_H
  extern "C"
  {
-   #include "../ffmpeg/include/libavcodec/avcodec.h"
-
+   #include <libavcodec/avcodec.h>
+   #include <libavformat/avformat.h>
+   #include <libswscale/swscale.h>
+   #include <libavutil/imgutils.h>
  }
 
 

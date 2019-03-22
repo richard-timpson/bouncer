@@ -1,5 +1,5 @@
 all: bouncer.cpp
-	g++ -o all bouncer.cpp `pkg-config --cflags --libs libavcodec`
+	g++ -o all bouncer.cpp `pkg-config --cflags --libs libavcodec libavformat libswscale libavutil`
 #compile ffmpeg needed libraries???
 debug: 
 	g++ -o debug -g bouncer.cpp 
