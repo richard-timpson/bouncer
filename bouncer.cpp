@@ -36,7 +36,7 @@ int main (int argc, char **argv)
   // following code is modified from this blog post
 
   // opening format context with jpef file
-  AVFormatContext *jpgFC;
+  AVFormatContext *jpgFC = NULL;
   if (avformat_open_input(&jpgFC, filename, NULL, NULL) != 0 ) 
   {
     printf("Error in opening input file %s",filename);
@@ -87,25 +87,24 @@ int main (int argc, char **argv)
   
 
   // putting a the frame from the image into an avpacket.
-  AVPacket* encodedPacket;
-  av_init_packet(encodedPacket);
-  encodedPacket->data=NULL;
-  encodedPacket->size=0;
+  AVPacket encodedPacket;
+  av_init_packet(&encodedPacket);
+  encodedPacket.data=NULL;
+  encodedPacket.size=0;
   //now read a frame into this AVPacket
-  if (av_read_frame(jpgFC,encodedPacket)<0)
+  if (av_read_frame(jpgFC,&encodedPacket)<0)
   {
      printf("Cannot read frame");
-     av_packet_unref(encodedPacket);
+     av_packet_unref(&encodedPacket);
      avcodec_close(pCodecCtx);
      avformat_close_input(&jpgFC);
      return ERROR_CODE;
   }
-  
 
   // sending frame to a decoder. 
   int frameFinished=0;
   AVFrame *decodedFrame=av_frame_alloc();
-  int sendRet = avcodec_send_packet(pCodecCtx, encodedPacket);
+  int sendRet = avcodec_send_packet(pCodecCtx, &encodedPacket);
   if (sendRet < 0) 
   {
     std::cout << "Error sending a packet for decoding" << std::endl;
@@ -123,7 +122,7 @@ int main (int argc, char **argv)
   AVFrame* destFrame = av_frame_alloc();
   // we want to modify this in the future to get only the supported pixel formats from the cool codec
   AVPixelFormat destFormat = AV_PIX_FMT_RGB8;
-  av_image_alloc(destFrame->data, destFrame->linesize, destFrame->width, destFrame->height, destFormat, 32);
+  av_image_alloc(destFrame->data, destFrame->linesize, decodedFrame->width, decodedFrame->height, destFormat, 32);
   //  avpicture_alloc(&destPic,destFormat, decodedFrame->width,decodedFrame->height);
   SwsContext *ctxt = sws_getContext(decodedFrame->width, decodedFrame->height,
 				    (AVPixelFormat)decodedFrame->format,decodedFrame->width, decodedFrame->height,
@@ -135,6 +134,8 @@ int main (int argc, char **argv)
     }
   sws_scale(ctxt, decodedFrame->data, decodedFrame->linesize, 0, decodedFrame->height, destFrame->data, destFrame->linesize);
   sws_freeContext(ctxt);
+
+  encode_cool(destFrame, 0);
 
   
   
@@ -160,6 +161,15 @@ int encode_cool(AVFrame* frame, int frameNumber)
     std::cout << "Couldn't find cool codec context" << std::endl;
     return ERROR_CODE;
   }
+
+  codec_context->time_base = (AVRational){1, 25};
+  codec_context->framerate = (AVRational){25, 1};
+  codec_context->pix_fmt = AV_PIX_FMT_RGB8;
+  codec_context->width = frame->width;
+  codec_context->height = frame->height;
+  codec_context->bit_rate = 4000000;
+  codec_context->gop_size = 1;
+
 
   // allocate packet for cool file
   AVPacket* cool_pkt = av_packet_alloc();
