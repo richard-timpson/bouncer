@@ -133,6 +133,7 @@ int main (int argc, char **argv)
   // Maybe remove later
   destFrame -> width = decodedFrame -> width;
   destFrame -> height = decodedFrame -> height;
+  destFrame->format = destFormat;
 
   // Debugging code
   std::cout << decodedFrame->width << " " << decodedFrame -> height << std::endl;
@@ -145,7 +146,7 @@ int main (int argc, char **argv)
 				    destFormat,SWS_BILINEAR, NULL, NULL, NULL);
   if (ctxt == NULL)
     {
-      printf ("Error while calling sws_getContext");
+      printf ("Error while calling sws_getContext"); 
       return ERROR_CODE;
     }
 
@@ -169,6 +170,7 @@ int encode_cool(AVFrame* frame, int frameNumber)
   std::cout << "Entering Encode function " << std::endl;
 
   // get the cool codec
+  std::cout << "Finding cool codec " << std::endl;
   const AVCodec* cool_codec = avcodec_find_encoder_by_name("cool");
   if (!cool_codec)
   {
@@ -178,6 +180,7 @@ int encode_cool(AVFrame* frame, int frameNumber)
 
 
   // get the cool codec context
+  std::cout << "Finding codec context " << std::endl;
   AVCodecContext* codec_context = avcodec_alloc_context3(cool_codec);
   if (!codec_context)
   {
@@ -185,8 +188,8 @@ int encode_cool(AVFrame* frame, int frameNumber)
     return ERROR_CODE;
   }
 
-  frame-> format = codec_context -> pix_fmt;
-
+  // frame-> format = codec_context -> pix_fmt;
+  std::cout << "frame format is " << frame->format <<  std::endl;
   codec_context->time_base = (AVRational){1, 25};
   codec_context->framerate = (AVRational){25, 1};
   codec_context->pix_fmt = AV_PIX_FMT_RGB8;
@@ -197,6 +200,7 @@ int encode_cool(AVFrame* frame, int frameNumber)
 
 
   // allocate packet for cool file
+  std::cout << "allocating packet  " << std::endl;
   AVPacket* cool_pkt = av_packet_alloc();
   if (!cool_pkt)
   {
@@ -205,6 +209,7 @@ int encode_cool(AVFrame* frame, int frameNumber)
   }
 
   // open the codec
+  std::cout << "opening codec " << std::endl;
   int codecOpenRet = avcodec_open2(codec_context, cool_codec, NULL);
   if (codecOpenRet < 0)
   {
@@ -214,6 +219,7 @@ int encode_cool(AVFrame* frame, int frameNumber)
 
 
   // encode the frame using cool codec
+  std::cout << "sending frame to packe " << std::endl;
   int sendFrameRet = avcodec_send_frame(codec_context, frame);
   if (sendFrameRet < 0)
   {
