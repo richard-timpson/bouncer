@@ -69,7 +69,7 @@ int main (int argc, char **argv)
      return ERROR_CODE;
   }
 
-  // Getting the coded associated with the video stream. 
+  // Getting the codec associated with the video stream. 
   AVCodecContext *pCodecCtx=jpgFC->streams[videoStreamIndex]->codec;
   AVCodec *pCodec=avcodec_find_decoder(pCodecCtx->codec_id);
   if (pCodec==NULL)
@@ -122,7 +122,23 @@ int main (int argc, char **argv)
   AVFrame* destFrame = av_frame_alloc();
   // we want to modify this in the future to get only the supported pixel formats from the cool codec
   AVPixelFormat destFormat = AV_PIX_FMT_RGB8;
-  av_image_alloc(destFrame->data, destFrame->linesize, decodedFrame->width, decodedFrame->height, destFormat, 32);
+  // modifies the buffer but does not set up things like height, width, and format // I believe
+  int retImage = av_image_alloc(destFrame->data, destFrame->linesize, decodedFrame->width, decodedFrame->height, destFormat, 32);
+  if(retImage < 0)
+  {
+    std::cout << "Error allocating image for destination package" << std::endl;
+    return 1;
+  }
+
+  // Maybe remove later
+  destFrame -> width = decodedFrame -> width;
+  destFrame -> height = decodedFrame -> height;
+
+  // Debugging code
+  std::cout << decodedFrame->width << " " << decodedFrame -> height << std::endl;
+  std::cout << destFrame->width << " " << destFrame -> height << std::endl;
+  std::cout << pCodecCtx->width << " " << pCodecCtx -> height << std::endl;
+ 
   //  avpicture_alloc(&destPic,destFormat, decodedFrame->width,decodedFrame->height);
   SwsContext *ctxt = sws_getContext(decodedFrame->width, decodedFrame->height,
 				    (AVPixelFormat)decodedFrame->format,decodedFrame->width, decodedFrame->height,
@@ -132,8 +148,13 @@ int main (int argc, char **argv)
       printf ("Error while calling sws_getContext");
       return ERROR_CODE;
     }
+
+  // puts the information in the destFrame data but does not set everything that needs to be set for the frame
   sws_scale(ctxt, decodedFrame->data, decodedFrame->linesize, 0, decodedFrame->height, destFrame->data, destFrame->linesize);
   sws_freeContext(ctxt);
+
+  
+
 
   encode_cool(destFrame, 0);
 
@@ -144,6 +165,8 @@ int main (int argc, char **argv)
 
 int encode_cool(AVFrame* frame, int frameNumber) 
 {
+
+  std::cout << "Entering Encode function " << std::endl;
 
   // get the cool codec
   const AVCodec* cool_codec = avcodec_find_encoder_by_name("cool");
@@ -161,6 +184,8 @@ int encode_cool(AVFrame* frame, int frameNumber)
     std::cout << "Couldn't find cool codec context" << std::endl;
     return ERROR_CODE;
   }
+
+  frame-> format = codec_context -> pix_fmt;
 
   codec_context->time_base = (AVRational){1, 25};
   codec_context->framerate = (AVRational){25, 1};
