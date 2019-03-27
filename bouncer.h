@@ -13,7 +13,8 @@
    #include <libavutil/imgutils.h>
  }
 
-int decode_jpeg(char * filename, AVFrame *);
+int decode_and_scale_jpeg(char * filename, AVFrame *);
+int animate_jpeg(AVFrame *);
 int encode_cool(AVFrame* frame, int frameNumber);
 
 

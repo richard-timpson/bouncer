@@ -12,6 +12,7 @@
 #include "bouncer.h"
 #include <iostream>
 #include <string>
+#include <cmath>
 
 
 int ERROR_CODE = -1;
@@ -19,14 +20,20 @@ int ERROR_CODE = -1;
 int main (int argc, char **argv)
 {
   AVFrame * frame = av_frame_alloc();
-  if (decode_jpeg(argv[1], frame) < 0)
+  if (decode_and_scale_jpeg(argv[1], frame) < 0)
   {
-      return ERROR_CODE;
+    std::cout << "Couldn't decode and scale jpeg" << std::endl;
+    return ERROR_CODE;
+  }
+  if (animate_jpeg(frame) < 0 )
+  {
+    std::cout << "Couldn't animate image" << std::endl;
+    return ERROR_CODE;
   }
   encode_cool(frame, 0);
 }
 
-int decode_jpeg(char * filename, AVFrame * destFrame)
+int decode_and_scale_jpeg(char * filename, AVFrame * destFrame)
 {
 
   //  std::cout << "Hello world!" << std::endl;
@@ -167,6 +174,55 @@ int decode_jpeg(char * filename, AVFrame * destFrame)
   //  encode_cool(destFrame, 0);  
 }
 
+int animate_jpeg(AVFrame * frame)
+{
+  int centerXInitial = frame->width/2;
+  int centerYInitial = frame->height/2;
+  int radius = (frame->width + frame->height)/ 10;
+  int diameter = 2 * radius;
+  int centerX = centerXInitial;
+  int centerY = centerYInitial;
+  for (int k = 0 ; k < 300; k++)
+  {
+    AVFrame * current_frame = av_frame_alloc();
+    if (av_frame_copy(current_frame,frame) < 0)
+    {
+      std::cout << "Couldn't copy frame data" << std::endl;
+      return ERROR_CODE;
+    }
+
+    int topLeftX = centerX - radius;
+    int topLeftY = centerY - radius;
+    for (int i = topLeftX; i < topLeftX + diameter; i+=3)
+    {
+      for (int j = topLeftY; j < topLeftY + diameter; j++)
+      {
+
+	int distance = std::sqrt(std::pow(i - centerX,2) + std::pow(j - centerY,2));
+	//std::cout << "distance is " << distance << std::endl;
+	if (distance < radius)
+	{
+	  int index = j* frame->linesize[0] + i;
+	  *(current_frame->data[0] + index) = 255;
+	  *(current_frame->data[0] + index + 1) = 255;    
+	  *(current_frameframe->data[0] + index + 2) = 255;
+	}
+      //std::cout << "radius is " << radius << std::endl;
+      }
+
+    }
+    encode_cool(frame, k);
+  }
+return 1;
+
+
+
+
+
+  
+
+
+}
 
 int encode_cool(AVFrame* frame, int frameNumber) 
 {
@@ -243,19 +299,12 @@ int encode_cool(AVFrame* frame, int frameNumber)
     return ERROR_CODE;
   }
   
+  char* filename = "test";
+  strcat(filename, itoa(frameNumber));
+  strcat(filename, ".cool");
   // write the image data to a cool file. 
-  FILE*f = fopen("test.cool", "wb");
+  FILE*f = fopen(filename, "wb");
   fwrite(cool_pkt->data, 1, cool_pkt->size, f);
-  
-
-
-  
-
-  
-
-  
-
-  
 
 }
 
