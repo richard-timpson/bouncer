@@ -14,8 +14,8 @@
  }
 
 int decode_and_scale_jpeg(char * filename, AVFrame *);
-int animate_jpeg(AVFrame *);
+int animate_jpeg(AVFrame * frame);
 int encode_cool(AVFrame* frame, int frameNumber);
-
+int av_frame_deep_copy(AVFrame * copyFrame, AVFrame* frame);
 
 #endif

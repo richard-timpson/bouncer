@@ -13,6 +13,7 @@
 #include <iostream>
 #include <string>
 #include <cmath>
+#include <sstream>
 
 
 int ERROR_CODE = -1;
@@ -184,8 +185,8 @@ int animate_jpeg(AVFrame * frame)
   int centerY = centerYInitial;
   for (int k = 0 ; k < 300; k++)
   {
-    AVFrame * current_frame = av_frame_alloc();
-    if (av_frame_copy(current_frame,frame) < 0)
+    AVFrame * current_frame;
+    if (av_frame_deep_copy(current_frame,frame) < 0)
     {
       std::cout << "Couldn't copy frame data" << std::endl;
       return ERROR_CODE;
@@ -205,7 +206,7 @@ int animate_jpeg(AVFrame * frame)
 	  int index = j* frame->linesize[0] + i;
 	  *(current_frame->data[0] + index) = 255;
 	  *(current_frame->data[0] + index + 1) = 255;    
-	  *(current_frameframe->data[0] + index + 2) = 255;
+	  *(current_frame->data[0] + index + 2) = 255;
 	}
       //std::cout << "radius is " << radius << std::endl;
       }
@@ -214,15 +215,41 @@ int animate_jpeg(AVFrame * frame)
     encode_cool(frame, k);
   }
 return 1;
-
-
-
-
-
-  
-
-
 }
+
+int av_frame_deep_copy(AVFrame * copyFrame, AVFrame* frame)
+ {
+   std::cout<< "Enter Deep copy" << std::endl;
+   /* Code replicated from stack overflow post:
+      https://stackoverflow.com/questions/38808946/copying-a-decoded-ffmpeg-avframe*/
+   copyFrame = av_frame_alloc();
+   copyFrame->format = frame->format;
+   copyFrame->width = frame->width;
+   copyFrame->height = frame->height;
+   copyFrame->channels = frame->channels;
+   copyFrame->channel_layout = frame->channel_layout;
+   copyFrame->nb_samples = frame->nb_samples;
+
+   if( av_frame_get_buffer(copyFrame, 32) < 0);
+   {
+     std::cout << "Could not get buffer" << std::endl;
+     return ERROR_CODE;
+   }
+
+   if( av_frame_copy(copyFrame, frame)< 0)
+   {
+     std::cout << "Could not get copy" << std::endl;
+     return ERROR_CODE;
+   }
+   if(av_frame_copy_props(copyFrame, frame) < 0)
+   {
+     std::cout << "Could not get copy props" << std::endl;
+     return ERROR_CODE;
+   }
+
+
+   std::cout<< "Exit Deep copy" << std::endl;
+ }
 
 int encode_cool(AVFrame* frame, int frameNumber) 
 {
@@ -298,12 +325,18 @@ int encode_cool(AVFrame* frame, int frameNumber)
     std::cout << "Error during encoding" << std::endl;
     return ERROR_CODE;
   }
+
+// std::string s = stringstream.str();
+// const char* p = s.c_str();
   
-  char* filename = "test";
-  strcat(filename, itoa(frameNumber));
-  strcat(filename, ".cool");
+  std::stringstream ss; int x = 23;
+  ss << "frame";
+  ss << frameNumber;
+  ss << ".cool";
+  std::string str = ss.str();
+  const char * fileName = str.c_str();
   // write the image data to a cool file. 
-  FILE*f = fopen(filename, "wb");
+  FILE*f = fopen(fileName, "wb");
   fwrite(cool_pkt->data, 1, cool_pkt->size, f);
 
 }
