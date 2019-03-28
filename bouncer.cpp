@@ -20,6 +20,9 @@ int ERROR_CODE = -1;
 
 int main (int argc, char **argv)
 {
+
+  //  if (argv[1]
+
   AVFrame * frame = av_frame_alloc();
   if (decode_and_scale_jpeg(argv[1], frame) < 0)
   {
@@ -183,17 +186,19 @@ int animate_jpeg(AVFrame * frame)
   int diameter = 2 * radius;
   int centerX = centerXInitial;
   int centerY = centerYInitial;
+  bool going_down = true; 
   for (int k = 0 ; k < 300; k++)
   {
-    AVFrame * current_frame;
+    AVFrame * current_frame = av_frame_alloc();
     if (av_frame_deep_copy(current_frame,frame) < 0)
     {
       std::cout << "Couldn't copy frame data" << std::endl;
       return ERROR_CODE;
     }
-
+    
     int topLeftX = centerX - radius;
     int topLeftY = centerY - radius;
+    std::cout << "center x value" << centerY << std::endl;
     for (int i = topLeftX; i < topLeftX + diameter; i+=3)
     {
       for (int j = topLeftY; j < topLeftY + diameter; j++)
@@ -210,45 +215,66 @@ int animate_jpeg(AVFrame * frame)
 	}
       //std::cout << "radius is " << radius << std::endl;
       }
-
     }
-    encode_cool(frame, k);
+    if (going_down)
+    {
+      centerY += 3;
+      if (centerY + radius > frame->height)
+	going_down = false;
+    }
+    else if (!going_down)
+    {
+      centerY -= 3;
+      if (centerY < centerYInitial)
+	going_down = true;
+    }
+
+    encode_cool(current_frame, k);
   }
 return 1;
 }
 
 int av_frame_deep_copy(AVFrame * copyFrame, AVFrame* frame)
  {
-   std::cout<< "Enter Deep copy" << std::endl;
-   /* Code replicated from stack overflow post:
-      https://stackoverflow.com/questions/38808946/copying-a-decoded-ffmpeg-avframe*/
-   copyFrame = av_frame_alloc();
-   copyFrame->format = frame->format;
-   copyFrame->width = frame->width;
-   copyFrame->height = frame->height;
-   copyFrame->channels = frame->channels;
-   copyFrame->channel_layout = frame->channel_layout;
-   copyFrame->nb_samples = frame->nb_samples;
-
-   if( av_frame_get_buffer(copyFrame, 32) < 0);
-   {
-     std::cout << "Could not get buffer" << std::endl;
-     return ERROR_CODE;
-   }
-
-   if( av_frame_copy(copyFrame, frame)< 0)
-   {
-     std::cout << "Could not get copy" << std::endl;
-     return ERROR_CODE;
-   }
-   if(av_frame_copy_props(copyFrame, frame) < 0)
-   {
-     std::cout << "Could not get copy props" << std::endl;
-     return ERROR_CODE;
-   }
 
 
-   std::cout<< "Exit Deep copy" << std::endl;
+   //std::cout<< "Enter Deep copy" << std::endl;
+  /* Code replicated from stack overflow post:
+     https://stackoverflow.com/questions/38808946/copying-a-decoded-ffmpeg-avframe*/
+  //copyFrame = av_frame_alloc();
+  if( av_image_alloc(copyFrame->data, copyFrame->linesize, frame->width, frame->height, (AVPixelFormat)frame->format, 32) < 0)
+  {
+    std::cout << "Error allocating image for new frame" << std::endl;
+    return 1;
+  }
+
+  
+  copyFrame->format = frame->format;
+  copyFrame->width = frame->width;
+  copyFrame->height = frame->height;
+  //  copyFrame->channels = frame->channels;
+  //  copyFrame->channel_layout = frame->channel_layout;
+  //  copyFrame->nb_samples = frame->nb_samples;
+
+  // if( av_frame_get_buffer(copyFrame, 32) < 0);
+  // {
+  //   std::cout << "Could not get buffer" << std::endl;
+  //   return ERROR_CODE;
+  // }
+
+  if( av_frame_copy(copyFrame, frame)< 0)
+  {
+    std::cout << "Could not get copy" << std::endl;
+    return ERROR_CODE;
+  }
+  // if(av_frame_copy_props(copyFrame, frame) < 0)
+  // {
+  //   std::cout << "Could not get copy props" << std::endl;
+  //   return ERROR_CODE;
+  // }
+
+
+  //std::cout<< "Exit Deep copy" << std::endl;
  }
 
 int encode_cool(AVFrame* frame, int frameNumber) 
@@ -315,6 +341,7 @@ int encode_cool(AVFrame* frame, int frameNumber)
     std::cout << "Couldn't open codec" << std::endl;
     return ERROR_CODE;
   }
+  av_frame_free(&frame);
   
   // receive the encoded data into a packet
   int receivePktRet = avcodec_receive_packet(codec_context, cool_pkt);
